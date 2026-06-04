@@ -22,6 +22,15 @@ import * as birthday from './commands/birthday.js';
 import * as nextBirthdays from './commands/next-birthdays.js';
 import * as setUserBirthday from './commands/set-user-birthday.js';
 import * as unsetUserBirthday from './commands/unset-user-birthday.js';
+import * as kick from './commands/kick.js';
+import * as ban from './commands/ban.js';
+import * as unban from './commands/unban.js';
+import * as timeoutCmd from './commands/timeout.js';
+import * as untimeout from './commands/untimeout.js';
+import * as warn from './commands/warn.js';
+import * as warnings from './commands/warnings.js';
+import * as clearWarnings from './commands/clear-warnings.js';
+import * as purge from './commands/purge.js';
 import { startBirthdayWatcher } from './birthdays.js';
 
 const token = process.env.NIGHTINGALE_DISCORD_BOT_TOKEN;
@@ -41,6 +50,15 @@ for (const c of [
   nextBirthdays,
   setUserBirthday,
   unsetUserBirthday,
+  kick,
+  ban,
+  unban,
+  timeoutCmd,
+  untimeout,
+  warn,
+  warnings,
+  clearWarnings,
+  purge,
 ]) {
   commands.set(c.data.name, c);
 }

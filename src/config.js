@@ -32,4 +32,16 @@ export const CFG = {
   // anchor there. Override via env if needed.
   birthdayTz: process.env.BIRTHDAY_TZ || 'America/Chicago',
   generalChannelId: '1475433666682290240',
+
+  // Moderation log — every kick/ban/timeout/warn/purge/auto-mod hit posts an
+  // embed here for audit. Action embeds are color-coded by severity.
+  modLogChannelId: '1476427994082840737',
+
+  // Passive spam detector: if a user sends >= `messageThreshold` messages in
+  // `windowMs` they're auto-timed-out for `timeoutMs` and logged.
+  spam: {
+    windowMs: 5_000,
+    messageThreshold: 8,
+    timeoutMs: 5 * 60 * 1_000,
+  },
 };

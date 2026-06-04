@@ -30,7 +30,47 @@ db.exec(`
     last_announced_year  INTEGER NOT NULL DEFAULT 0
   );
   CREATE INDEX IF NOT EXISTS idx_birthdays_md ON birthdays(month, day);
+
+  CREATE TABLE IF NOT EXISTS warnings (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id      TEXT    NOT NULL,
+    moderator_id TEXT    NOT NULL,
+    reason       TEXT,
+    created_at   INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_warnings_user ON warnings(user_id);
 `);
+
+const addWarnStmt = db.prepare(`
+  INSERT INTO warnings (user_id, moderator_id, reason, created_at)
+  VALUES (?, ?, ?, ?)
+`);
+const listWarnStmt = db.prepare(`
+  SELECT * FROM warnings WHERE user_id = ? ORDER BY created_at DESC
+`);
+const countWarnStmt = db.prepare(
+  'SELECT COUNT(*) AS n FROM warnings WHERE user_id = ?'
+);
+const clearWarnStmt = db.prepare('DELETE FROM warnings WHERE user_id = ?');
+
+export function addWarning(userId, moderatorId, reason) {
+  const info = addWarnStmt.run(
+    userId,
+    moderatorId,
+    reason || null,
+    Date.now()
+  );
+  return info.lastInsertRowid;
+}
+export function listWarnings(userId) {
+  return listWarnStmt.all(userId);
+}
+export function warningCount(userId) {
+  return countWarnStmt.get(userId).n;
+}
+export function clearWarnings(userId) {
+  return clearWarnStmt.run(userId).changes;
+}
 
 const upsert = db.prepare(`
   INSERT INTO users (user_id, username, xp, level, last_xp_at)
