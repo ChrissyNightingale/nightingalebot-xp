@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { postModLog } from '../mod-log.js';
+import { denyIfNotMod } from '../permissions.js';
 
 export const data = new SlashCommandBuilder()
   .setName('untimeout')
@@ -13,6 +14,7 @@ export const data = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers);
 
 export async function execute(interaction) {
+  if (await denyIfNotMod(interaction)) return;
   const user = interaction.options.getUser('user');
   const reason = interaction.options.getString('reason');
 

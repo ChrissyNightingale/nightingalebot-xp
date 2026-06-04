@@ -5,6 +5,7 @@
 
 import { CFG } from './config.js';
 import { postModLog, humanDuration } from './mod-log.js';
+import { isMod } from './permissions.js';
 
 // userId -> [timestamps]
 const buffers = new Map();
@@ -19,7 +20,7 @@ export async function checkSpam(message) {
   if (!message.guild) return;
 
   // Mods + admins are exempt — they can't spam themselves.
-  if (message.member?.permissions?.has('ModerateMembers')) return;
+  if (isMod(message.member)) return;
 
   const now = Date.now();
   const userId = message.author.id;

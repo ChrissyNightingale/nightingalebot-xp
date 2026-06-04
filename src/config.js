@@ -37,6 +37,14 @@ export const CFG = {
   // embed here for audit. Action embeds are color-coded by severity.
   modLogChannelId: '1476427994082840737',
 
+  // Hard gate on moderation commands. Only members holding one of these roles
+  // can run /kick, /ban, /timeout, /warn, /purge, etc. Discord's command
+  // permission flags ride alongside but this check is the actual enforcement.
+  modRoleIds: [
+    '1476196796358463553', // Admin
+    '1476427492389556387', // mods
+  ],
+
   // Passive spam detector: if a user sends >= `messageThreshold` messages in
   // `windowMs` they're auto-timed-out for `timeoutMs` and logged.
   spam: {

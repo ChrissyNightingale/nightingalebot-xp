@@ -4,6 +4,7 @@ import {
   ChannelType,
 } from 'discord.js';
 import { postModLog } from '../mod-log.js';
+import { denyIfNotMod } from '../permissions.js';
 
 export const data = new SlashCommandBuilder()
   .setName('purge')
@@ -25,6 +26,7 @@ export const data = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages);
 
 export async function execute(interaction) {
+  if (await denyIfNotMod(interaction)) return;
   const count = interaction.options.getInteger('count');
   const user = interaction.options.getUser('user');
   const channel = interaction.channel;

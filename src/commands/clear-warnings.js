@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { postModLog } from '../mod-log.js';
 import { clearWarnings, warningCount } from '../db.js';
+import { denyIfNotMod } from '../permissions.js';
 
 export const data = new SlashCommandBuilder()
   .setName('clear-warnings')
@@ -14,6 +15,7 @@ export const data = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
 
 export async function execute(interaction) {
+  if (await denyIfNotMod(interaction)) return;
   const user = interaction.options.getUser('user');
   const reason = interaction.options.getString('reason');
   const before = warningCount(user.id);

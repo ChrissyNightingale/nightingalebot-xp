@@ -4,6 +4,7 @@ import {
   PermissionFlagsBits,
 } from 'discord.js';
 import { listWarnings } from '../db.js';
+import { denyIfNotMod } from '../permissions.js';
 
 export const data = new SlashCommandBuilder()
   .setName('warnings')
@@ -14,6 +15,7 @@ export const data = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers);
 
 export async function execute(interaction) {
+  if (await denyIfNotMod(interaction)) return;
   const user = interaction.options.getUser('user');
   const rows = listWarnings(user.id);
 

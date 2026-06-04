@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { postModLog } from '../mod-log.js';
+import { denyIfNotMod } from '../permissions.js';
 
 export const data = new SlashCommandBuilder()
   .setName('unban')
@@ -16,6 +17,7 @@ export const data = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers);
 
 export async function execute(interaction) {
+  if (await denyIfNotMod(interaction)) return;
   const userId = interaction.options.getString('user_id').trim();
   const reason = interaction.options.getString('reason');
 

@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { postModLog, parseDuration, humanDuration } from '../mod-log.js';
+import { denyIfNotMod } from '../permissions.js';
 
 const MAX_TIMEOUT_MS = 28 * 24 * 60 * 60 * 1000; // Discord max: 28 days
 
@@ -21,6 +22,7 @@ export const data = new SlashCommandBuilder()
   .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers);
 
 export async function execute(interaction) {
+  if (await denyIfNotMod(interaction)) return;
   const user = interaction.options.getUser('user');
   const durationRaw = interaction.options.getString('duration');
   const reason = interaction.options.getString('reason');
