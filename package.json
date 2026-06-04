@@ -1,0 +1,17 @@
+{
+  "name": "nightingalebot-xp",
+  "version": "0.1.0",
+  "description": "Hosted Discord XP/leveling bot for Chrissy Nightingale's server. Companion to the cron-based NightingaleBot.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "discord.js": "^14.16.3"
+  }
+}

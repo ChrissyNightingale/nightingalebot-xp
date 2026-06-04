@@ -1,0 +1,16 @@
+app = "nightingalebot-xp"
+primary_region = "iad"
+
+[build]
+
+[env]
+  DB_PATH = "/data/xp.sqlite"
+
+[mounts]
+  source = "xpdata"
+  destination = "/data"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "256mb"
