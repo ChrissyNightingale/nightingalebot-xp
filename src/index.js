@@ -13,6 +13,7 @@ import {
 import { CFG } from './config.js';
 import messageCreate from './events/messageCreate.js';
 import messageReactionAdd from './events/messageReactionAdd.js';
+import messageReactionRemove from './events/messageReactionRemove.js';
 import * as rank from './commands/rank.js';
 import * as leaderboard from './commands/leaderboard.js';
 import * as giveXp from './commands/give-xp.js';
@@ -106,6 +107,7 @@ client.once('clientReady', async (c) => {
 
 client.on('messageCreate', messageCreate);
 client.on('messageReactionAdd', messageReactionAdd);
+client.on('messageReactionRemove', messageReactionRemove);
 
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
