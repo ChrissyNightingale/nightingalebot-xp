@@ -26,4 +26,10 @@ export const CFG = {
     10: '1476427226361762030',
     15: '1476427142869946418',
   },
+
+  // Birthday announcements fire when the local date in this time zone matches
+  // a stored birthday. Chrissy + most of the fanbase are US Central, so we
+  // anchor there. Override via env if needed.
+  birthdayTz: process.env.BIRTHDAY_TZ || 'America/Chicago',
+  generalChannelId: '1475433666682290240',
 };

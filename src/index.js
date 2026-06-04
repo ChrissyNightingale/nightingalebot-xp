@@ -16,6 +16,13 @@ import messageReactionAdd from './events/messageReactionAdd.js';
 import * as rank from './commands/rank.js';
 import * as leaderboard from './commands/leaderboard.js';
 import * as giveXp from './commands/give-xp.js';
+import * as rememberBirthday from './commands/remember-birthday.js';
+import * as forgetBirthday from './commands/forget-birthday.js';
+import * as birthday from './commands/birthday.js';
+import * as nextBirthdays from './commands/next-birthdays.js';
+import * as setUserBirthday from './commands/set-user-birthday.js';
+import * as unsetUserBirthday from './commands/unset-user-birthday.js';
+import { startBirthdayWatcher } from './birthdays.js';
 
 const token = process.env.NIGHTINGALE_DISCORD_BOT_TOKEN;
 if (!token) {
@@ -24,7 +31,17 @@ if (!token) {
 }
 
 const commands = new Collection();
-for (const c of [rank, leaderboard, giveXp]) {
+for (const c of [
+  rank,
+  leaderboard,
+  giveXp,
+  rememberBirthday,
+  forgetBirthday,
+  birthday,
+  nextBirthdays,
+  setUserBirthday,
+  unsetUserBirthday,
+]) {
   commands.set(c.data.name, c);
 }
 
@@ -49,17 +66,17 @@ client.once('clientReady', async (c) => {
     await rest.put(
       Routes.applicationGuildCommands(c.user.id, CFG.guildId),
       {
-        body: [
-          rank.data.toJSON(),
-          leaderboard.data.toJSON(),
-          giveXp.data.toJSON(),
-        ],
+        body: [...commands.values()].map((cmd) => cmd.data.toJSON()),
       }
     );
-    console.log(`slash commands registered for guild ${CFG.guildId}`);
+    console.log(
+      `slash commands registered for guild ${CFG.guildId} (${commands.size} cmds)`
+    );
   } catch (e) {
     console.error(`slash command registration failed: ${e.message}`);
   }
+
+  startBirthdayWatcher(c);
 });
 
 client.on('messageCreate', messageCreate);

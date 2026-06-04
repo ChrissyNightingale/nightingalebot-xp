@@ -21,6 +21,15 @@ db.exec(`
     last_xp_at INTEGER NOT NULL DEFAULT 0
   );
   CREATE INDEX IF NOT EXISTS idx_users_xp ON users(xp DESC);
+
+  CREATE TABLE IF NOT EXISTS birthdays (
+    user_id              TEXT PRIMARY KEY,
+    month                INTEGER NOT NULL CHECK(month BETWEEN 1 AND 12),
+    day                  INTEGER NOT NULL CHECK(day BETWEEN 1 AND 31),
+    year                 INTEGER,
+    last_announced_year  INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX IF NOT EXISTS idx_birthdays_md ON birthdays(month, day);
 `);
 
 const upsert = db.prepare(`
