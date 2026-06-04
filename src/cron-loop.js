@@ -832,6 +832,9 @@ async function checkReactionRoleGroup(state, groupKey) {
   if (!stored.messageId) return;
 
   for (const { emoji, roleId, label } of group.map) {
+    // Sleep between emoji polls — Discord enforces ~5 req/sec per channel on
+    // the reactions endpoint and we have 11 emojis across two messages.
+    await new Promise((r) => setTimeout(r, 350));
     let reactors;
     try {
       reactors = await fetchReactionUsers(group.channelId, stored.messageId, emoji);
