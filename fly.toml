@@ -14,3 +14,10 @@ primary_region = "iad"
   cpu_kind = "shared"
   cpus = 1
   memory = "256mb"
+
+# Keep the machine running 24/7. With `on-failure` (Fly's default) a clean
+# exit leaves the machine stopped — Discord then shows the bot offline.
+# `always` brings it back up no matter how it exited.
+[restart]
+  policy = "always"
+  max_retries = 10
