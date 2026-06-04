@@ -9,11 +9,31 @@ export async function handleLevelUp(client, user, newLevel) {
 
   const member = await guild.members.fetch(user.id).catch(() => null);
   if (member) {
-    for (const [lvl, roleId] of Object.entries(CFG.levelRoles)) {
-      if (newLevel >= Number(lvl) && !member.roles.cache.has(roleId)) {
+    // Sort thresholds ascending so we can pick the highest the user qualifies
+    // for. Only that one role stays; lower-tier level roles get stripped.
+    const tiers = Object.entries(CFG.levelRoles)
+      .map(([lvl, roleId]) => ({ lvl: Number(lvl), roleId }))
+      .sort((a, b) => a.lvl - b.lvl);
+
+    const earned = [...tiers].reverse().find((t) => newLevel >= t.lvl);
+    const earnedRoleId = earned?.roleId;
+
+    if (earnedRoleId && !member.roles.cache.has(earnedRoleId)) {
+      await member.roles
+        .add(earnedRoleId, `Level ${earned.lvl} reward`)
+        .catch((e) => console.error(`level-role add ${earnedRoleId}: ${e.message}`));
+    }
+
+    // Strip every other tier's role this member happens to hold — keeps the
+    // user in exactly one tier role at a time.
+    for (const t of tiers) {
+      if (t.roleId === earnedRoleId) continue;
+      if (member.roles.cache.has(t.roleId)) {
         await member.roles
-          .add(roleId, `Level ${lvl} reward`)
-          .catch((e) => console.error(`level-role add ${roleId}: ${e.message}`));
+          .remove(t.roleId, `Superseded by Level ${earned?.lvl ?? '?'}`)
+          .catch((e) =>
+            console.error(`level-role remove ${t.roleId}: ${e.message}`)
+          );
       }
     }
   }
