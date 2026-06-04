@@ -32,6 +32,7 @@ import * as warnings from './commands/warnings.js';
 import * as clearWarnings from './commands/clear-warnings.js';
 import * as purge from './commands/purge.js';
 import { startBirthdayWatcher } from './birthdays.js';
+import { startCronLoop } from './cron-loop.js';
 
 const token = process.env.NIGHTINGALE_DISCORD_BOT_TOKEN;
 if (!token) {
@@ -95,6 +96,12 @@ client.once('clientReady', async (c) => {
   }
 
   startBirthdayWatcher(c);
+
+  // Music/video/Twitch/Merch polling + reactive guild checks. Was a GH
+  // Actions cron at */30 (cost $0 but 30-min lag). Now in-process every 5
+  // min — same cost, 6x tighter detection.
+  const cronIntervalMs = Number(process.env.CRON_INTERVAL_MS) || 5 * 60 * 1000;
+  startCronLoop(cronIntervalMs);
 });
 
 client.on('messageCreate', messageCreate);
