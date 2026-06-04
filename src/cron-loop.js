@@ -832,9 +832,9 @@ async function checkReactionRoleGroup(state, groupKey) {
   if (!stored.messageId) return;
 
   for (const { emoji, roleId, label } of group.map) {
-    // Sleep between emoji polls — Discord enforces ~5 req/sec per channel on
-    // the reactions endpoint and we have 11 emojis across two messages.
-    await new Promise((r) => setTimeout(r, 350));
+    // Hard throttle — the reactions endpoint hits 429 fast. 1s/emoji ×
+    // 11 emojis = ~11s, well under the once-per-hour backstop cadence.
+    await new Promise((r) => setTimeout(r, 1000));
     let reactors;
     try {
       reactors = await fetchReactionUsers(group.channelId, stored.messageId, emoji);
@@ -1155,10 +1155,24 @@ async function simulateTwitchLive() {
   console.log('[twitch] simulation posted');
 }
 
+// Tick counter — used so the reaction-poll backstops only run occasionally
+// (every 12 ticks = ~once per hour). Gateway events handle the common case.
+let tickCounter = 0;
+
+async function backstopRulesReactions(state) {
+  if (tickCounter % 12 !== 0) return;
+  await checkRulesReactions(state);
+}
+async function backstopReactionRoles(state) {
+  if (tickCounter % 12 !== 0) return;
+  await checkReactionRoles(state);
+}
+
 // Run one full cron pass: every detection + maintenance task in order, with
 // per-task try/catch so a single source error doesn't blow up the rest. State
 // loaded once at the start, saved once at the end.
 export async function runCronTick() {
+  tickCounter++;
   const state = await loadState();
   const tasks = [
     ['youtube', checkYouTube],
@@ -1166,11 +1180,13 @@ export async function runCronTick() {
     ['twitch', checkTwitch],
     ['merch', checkMerch],
     ['joins', checkJoinWelcome],
-    // Grant @Verified to anyone who reacted to the rules before the verified
-    // check runs, so newly-granted members get welcomed in the same tick.
-    ['rules', checkRulesReactions],
-    ['reaction-roles', checkReactionRoles],
     ['verified', checkVerifiedWelcome],
+    // Reaction-role grant/revoke + rules-react grants are now driven by
+    // gateway events in reaction-roles-realtime.js. We keep the poll-based
+    // path as a once-per-hour backstop to catch reactions added while the
+    // bot was offline — runs on tick 0, then every 12th tick.
+    ['rules-backstop', backstopRulesReactions],
+    ['reaction-roles-backstop', backstopReactionRoles],
   ];
 
   let failures = 0;
