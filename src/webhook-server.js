@@ -3,11 +3,7 @@
 // service to the public hostname nightingalebot-xp.fly.dev).
 
 import http from 'node:http';
-import {
-  orderEmbed,
-  fetchOrderById,
-  fetchOrderByFriendlyId,
-} from './fourthwall.js';
+import { orderEmbed, fetchOrderById } from './fourthwall.js';
 import { SALES_CHANNEL_ID, postRecap } from './sales-recap.js';
 import { postMonthlyReportNow } from './monthly-report.js';
 import { sendOrderEmail } from './mail.js';
@@ -59,19 +55,17 @@ function pickHeadline(eventType, statusHint) {
 
 // On ORDER_UPDATED, Fourthwall sends a sparse payload (id + new status).
 // Re-fetch the full order so the embed has items, total, address, etc.
+// The /open-api/v1.0/order/{uuid} endpoint is the only working single-order
+// lookup — there's no /order/friendly/{friendlyId} on the open API surface.
 async function hydrateOrder(rawOrder, eventType) {
   if (!/updated/i.test(eventType)) return rawOrder;
+  if (!rawOrder?.id) return rawOrder;
   try {
-    if (rawOrder?.friendlyId) {
-      return await fetchOrderByFriendlyId(rawOrder.friendlyId);
-    }
-    if (rawOrder?.id) {
-      return await fetchOrderById(rawOrder.id);
-    }
+    return await fetchOrderById(rawOrder.id);
   } catch (e) {
     console.warn(`[webhook] hydrate failed: ${e.message}`);
+    return rawOrder;
   }
-  return rawOrder;
 }
 
 export function startWebhookServer(client) {
