@@ -4,7 +4,8 @@
 
 import http from 'node:http';
 import { orderEmbed } from './fourthwall.js';
-import { SALES_CHANNEL_ID } from './sales-recap.js';
+import { SALES_CHANNEL_ID, postRecap } from './sales-recap.js';
+import { postMonthlyReportNow } from './monthly-report.js';
 import { sendOrderEmail } from './mail.js';
 
 const PORT = Number(process.env.PORT) || 8080;
@@ -47,6 +48,33 @@ export function startWebhookServer(client) {
     if (req.method === 'GET' && req.url === '/health') {
       res.writeHead(200, { 'content-type': 'text/plain' });
       res.end('ok');
+      return;
+    }
+
+    // Admin-triggered manual fire of the daily recap or monthly report.
+    // Gated by ADMIN_KEY Bearer header.
+    if (req.method === 'POST' && (req.url === '/admin/recap' || req.url === '/admin/monthly')) {
+      const provided = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+      if (!process.env.ADMIN_KEY || provided !== process.env.ADMIN_KEY) {
+        res.writeHead(401, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'unauthorized' }));
+        return;
+      }
+      try {
+        if (req.url === '/admin/recap') {
+          await postRecap(client);
+          console.log('[admin] daily recap fired');
+        } else {
+          await postMonthlyReportNow(client);
+          console.log('[admin] monthly report fired');
+        }
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (e) {
+        console.error(`[admin] ${req.url} failed: ${e.message}`);
+        res.writeHead(500, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
       return;
     }
 
