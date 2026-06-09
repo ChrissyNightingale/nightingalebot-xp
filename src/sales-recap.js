@@ -39,8 +39,8 @@ async function saveLastPosted(key) {
 const DAILY_RECAP_CHANNEL_ID = '1513725119531319367';
 const SALES_CHANNEL_ID = '1513725077504397372';
 
-const RECAP_TZ = 'America/Chicago';
-const RECAP_HOUR = 9; // 09:00 local — the morning recap
+const RECAP_TZ = 'America/Los_Angeles';
+const RECAP_HOUR = 9; // 09:00 PT — the morning recap
 
 // Returns { year, month, day, hour, minute } for the configured TZ.
 function tzParts(d = new Date()) {

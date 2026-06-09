@@ -36,7 +36,7 @@ async function saveLastPosted(key) {
   }
 }
 
-const REPORT_TZ = 'America/Chicago';
+const REPORT_TZ = 'America/Los_Angeles';
 const REPORT_HOUR = 9;
 
 function tzParts(d = new Date()) {
