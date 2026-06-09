@@ -48,6 +48,10 @@ export async function fetchOrderByFriendlyId(friendlyId) {
   return fwGet(`/order/friendly/${friendlyId}`);
 }
 
+export async function fetchOrderById(id) {
+  return fwGet(`/order/${id}`);
+}
+
 export async function fetchProducts() {
   return fwGet('/products');
 }

@@ -3,7 +3,11 @@
 // service to the public hostname nightingalebot-xp.fly.dev).
 
 import http from 'node:http';
-import { orderEmbed } from './fourthwall.js';
+import {
+  orderEmbed,
+  fetchOrderById,
+  fetchOrderByFriendlyId,
+} from './fourthwall.js';
 import { SALES_CHANNEL_ID, postRecap } from './sales-recap.js';
 import { postMonthlyReportNow } from './monthly-report.js';
 import { sendOrderEmail } from './mail.js';
@@ -34,13 +38,40 @@ function readJson(req, max = 1_000_000) {
   });
 }
 
-function pickHeadline(eventType) {
+function pickHeadline(eventType, statusHint) {
   if (!eventType) return '🛒 Order event';
   if (/created|placed/i.test(eventType)) return '🛒 New order';
-  if (/fulfilled|shipped/i.test(eventType)) return '📦 Order shipped';
   if (/refund/i.test(eventType)) return '↩️ Order refunded';
   if (/canceled|cancelled/i.test(eventType)) return '❌ Order canceled';
+  // ORDER_UPDATED — disambiguate by fulfillment status if we have it.
+  if (/updated/i.test(eventType)) {
+    const s = String(statusHint || '').toUpperCase();
+    if (/SHIP/.test(s)) return '📦 Order shipped';
+    if (/DELIVER/.test(s)) return '✅ Order delivered';
+    if (/PROCESS/.test(s)) return '⚙️ Order processing';
+    if (/CANCEL/.test(s)) return '❌ Order canceled';
+    if (/RETURN/.test(s)) return '↩️ Order returned';
+    return '🔄 Order updated';
+  }
+  if (/fulfilled|shipped/i.test(eventType)) return '📦 Order shipped';
   return `🛒 ${eventType}`;
+}
+
+// On ORDER_UPDATED, Fourthwall sends a sparse payload (id + new status).
+// Re-fetch the full order so the embed has items, total, address, etc.
+async function hydrateOrder(rawOrder, eventType) {
+  if (!/updated/i.test(eventType)) return rawOrder;
+  try {
+    if (rawOrder?.friendlyId) {
+      return await fetchOrderByFriendlyId(rawOrder.friendlyId);
+    }
+    if (rawOrder?.id) {
+      return await fetchOrderById(rawOrder.id);
+    }
+  } catch (e) {
+    console.warn(`[webhook] hydrate failed: ${e.message}`);
+  }
+  return rawOrder;
 }
 
 export function startWebhookServer(client) {
@@ -84,8 +115,14 @@ export function startWebhookServer(client) {
         // Fourthwall payload shape: { type, data: { ... order ... } } — exact
         // fields vary by event. We tolerate both top-level and nested order.
         const eventType = payload?.type || payload?.event || 'unknown';
-        const order = payload?.data || payload?.order || payload;
-        const embed = orderEmbed(order, pickHeadline(eventType));
+        const raw = payload?.data || payload?.order || payload;
+        const order = await hydrateOrder(raw, eventType);
+        const statusHint =
+          order?.status ||
+          order?.fulfillment?.status ||
+          raw?.status ||
+          raw?.fulfillment?.status;
+        const embed = orderEmbed(order, pickHeadline(eventType, statusHint));
 
         const ch = await client.channels
           .fetch(SALES_CHANNEL_ID)
