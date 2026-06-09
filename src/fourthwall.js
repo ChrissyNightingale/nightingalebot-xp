@@ -69,13 +69,9 @@ function orderItems(o) {
   return (o?.offers || []).map((off) => off?.variant?.name).filter(Boolean);
 }
 
-// Customer display name: shipping/billing address name, else email local-part.
-function orderName(o) {
-  const addr = o?.shipping?.address || o?.billing?.address;
-  const full = [addr?.firstName, addr?.lastName].filter(Boolean).join(' ');
-  if (full) return full;
-  const email = o?.email || o?.customer?.email || '';
-  return email ? email.split('@')[0] : '—';
+// Customer email — what they checked out with.
+function orderEmail(o) {
+  return o?.email || o?.customer?.email || '—';
 }
 
 function inWindow(o, sinceMs, untilMs) {
@@ -135,7 +131,7 @@ export function orderEmbed(order, headline = '🛒 New order') {
     color: 0xff9f1c,
     description: items.slice(0, 1900),
     fields: [
-      { name: 'Customer', value: orderName(order), inline: true },
+      { name: 'Email', value: orderEmail(order), inline: true },
       { name: 'Total', value: `$${total.toFixed(2)}`, inline: true },
       { name: 'Where', value: `${city}${state ? ', ' + state : ''}`, inline: true },
     ],
