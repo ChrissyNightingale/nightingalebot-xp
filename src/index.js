@@ -34,6 +34,8 @@ import * as clearWarnings from './commands/clear-warnings.js';
 import * as purge from './commands/purge.js';
 import { startBirthdayWatcher } from './birthdays.js';
 import { startCronLoop } from './cron-loop.js';
+import { startSalesRecap } from './sales-recap.js';
+import { startWebhookServer } from './webhook-server.js';
 
 const token = process.env.NIGHTINGALE_DISCORD_BOT_TOKEN;
 if (!token) {
@@ -103,6 +105,9 @@ client.once('clientReady', async (c) => {
   // min — same cost, 6x tighter detection.
   const cronIntervalMs = Number(process.env.CRON_INTERVAL_MS) || 5 * 60 * 1000;
   startCronLoop(cronIntervalMs);
+
+  startSalesRecap(c);
+  startWebhookServer(c);
 });
 
 client.on('messageCreate', messageCreate);
