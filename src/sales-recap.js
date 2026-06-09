@@ -2,8 +2,39 @@
 // Fourthwall orders, computes prior-day totals, posts a summary embed to
 // the #daily-recap channel.
 
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { EmbedBuilder } from 'discord.js';
 import { fetchAllOrders, summarize } from './fourthwall.js';
+
+// Persist "last posted day" so a deploy/restart within the recap hour doesn't
+// re-fire. Lives on the Fly volume next to cron-state.json.
+const RECAP_STATE_PATH =
+  process.env.RECAP_STATE_PATH ||
+  path.join(
+    path.dirname(process.env.CRON_STATE_PATH || '/data/cron-state.json'),
+    'recap-state.json'
+  );
+
+async function loadLastPosted() {
+  try {
+    const s = JSON.parse(await fs.readFile(RECAP_STATE_PATH, 'utf8'));
+    return s?.lastPosted || null;
+  } catch {
+    return null;
+  }
+}
+async function saveLastPosted(key) {
+  try {
+    await fs.mkdir(path.dirname(RECAP_STATE_PATH), { recursive: true });
+    await fs.writeFile(
+      RECAP_STATE_PATH,
+      JSON.stringify({ lastPosted: key }, null, 2) + '\n'
+    );
+  } catch (e) {
+    console.error(`[sales] persist failed: ${e.message}`);
+  }
+}
 
 const DAILY_RECAP_CHANNEL_ID = '1513725119531319367';
 const SALES_CHANNEL_ID = '1513725077504397372';
@@ -130,18 +161,32 @@ async function postRecap(client) {
 }
 
 // Schedule: tick every minute, fire when local time crosses RECAP_HOUR:00
-// for a day we haven't yet posted.
+// for a day we haven't yet posted. The "last posted day" key is persisted
+// on the Fly volume so deploys/restarts during the recap hour don't refire.
 let lastPostedKey = null;
 
 export function startSalesRecap(client) {
+  // Warm the cache from disk so we don't refire on startup.
+  loadLastPosted().then((key) => {
+    if (key) {
+      lastPostedKey = key;
+      console.log(`[sales] last recap on record: ${key}`);
+    }
+  });
+
   const tick = async () => {
     try {
       const t = tzParts();
-      // Key by local date so we only post once per day.
       const todayKey = `${t.year}-${t.month}-${t.day}`;
       if (t.hour !== RECAP_HOUR) return;
-      if (lastPostedKey === todayKey) return;
+      // Defensive double-read of disk in case multiple instances race.
+      const onDisk = await loadLastPosted();
+      if (lastPostedKey === todayKey || onDisk === todayKey) {
+        if (onDisk && lastPostedKey !== onDisk) lastPostedKey = onDisk;
+        return;
+      }
       lastPostedKey = todayKey;
+      await saveLastPosted(todayKey);
       await postRecap(client);
       console.log(`[sales] daily recap posted for ${todayKey}`);
     } catch (e) {

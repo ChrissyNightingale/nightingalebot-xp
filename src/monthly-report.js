@@ -2,9 +2,39 @@
 // Chicago. Pulls all orders for the prior month, builds a CSV + summary
 // embed, posts to #daily-recap with the CSV as an attachment.
 
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { AttachmentBuilder, EmbedBuilder } from 'discord.js';
 import { fetchAllOrders } from './fourthwall.js';
 import { DAILY_RECAP_CHANNEL_ID } from './sales-recap.js';
+
+const MONTHLY_STATE_PATH =
+  process.env.MONTHLY_STATE_PATH ||
+  path.join(
+    path.dirname(process.env.CRON_STATE_PATH || '/data/cron-state.json'),
+    'monthly-state.json'
+  );
+async function loadLastPosted() {
+  try {
+    return (
+      JSON.parse(await fs.readFile(MONTHLY_STATE_PATH, 'utf8'))?.lastPosted ||
+      null
+    );
+  } catch {
+    return null;
+  }
+}
+async function saveLastPosted(key) {
+  try {
+    await fs.mkdir(path.dirname(MONTHLY_STATE_PATH), { recursive: true });
+    await fs.writeFile(
+      MONTHLY_STATE_PATH,
+      JSON.stringify({ lastPosted: key }, null, 2) + '\n'
+    );
+  } catch (e) {
+    console.error(`[monthly] persist failed: ${e.message}`);
+  }
+}
 
 const REPORT_TZ = 'America/Chicago';
 const REPORT_HOUR = 9;
@@ -227,14 +257,25 @@ async function buildAndPost(client) {
 let lastPostedKey = null;
 
 export function startMonthlyReport(client) {
+  loadLastPosted().then((k) => {
+    if (k) {
+      lastPostedKey = k;
+      console.log(`[monthly] last report on record: ${k}`);
+    }
+  });
+
   const tick = async () => {
     try {
       const t = tzParts();
-      // Only on the 1st at the recap hour.
       if (t.day !== 1 || t.hour !== REPORT_HOUR) return;
       const key = `${t.year}-${t.month}`;
-      if (lastPostedKey === key) return;
+      const onDisk = await loadLastPosted();
+      if (lastPostedKey === key || onDisk === key) {
+        if (onDisk && lastPostedKey !== onDisk) lastPostedKey = onDisk;
+        return;
+      }
       lastPostedKey = key;
+      await saveLastPosted(key);
       await buildAndPost(client);
       console.log(`[monthly] report posted for ${key}`);
     } catch (e) {
