@@ -35,6 +35,7 @@ import * as purge from './commands/purge.js';
 import { startBirthdayWatcher } from './birthdays.js';
 import { startCronLoop } from './cron-loop.js';
 import { startSalesRecap } from './sales-recap.js';
+import { startMonthlyReport } from './monthly-report.js';
 import { startWebhookServer } from './webhook-server.js';
 
 const token = process.env.NIGHTINGALE_DISCORD_BOT_TOKEN;
@@ -107,6 +108,7 @@ client.once('clientReady', async (c) => {
   startCronLoop(cronIntervalMs);
 
   startSalesRecap(c);
+  startMonthlyReport(c);
   startWebhookServer(c);
 });
 
