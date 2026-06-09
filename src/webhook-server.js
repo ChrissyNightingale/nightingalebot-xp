@@ -5,6 +5,7 @@
 import http from 'node:http';
 import { orderEmbed } from './fourthwall.js';
 import { SALES_CHANNEL_ID } from './sales-recap.js';
+import { sendOrderEmail } from './mail.js';
 
 const PORT = Number(process.env.PORT) || 8080;
 
@@ -65,6 +66,19 @@ export function startWebhookServer(client) {
           await ch
             .send({ embeds: [embed], allowedMentions: { parse: [] } })
             .catch((e) => console.error(`[webhook] post failed: ${e.message}`));
+        }
+
+        // Also email the sales + merch distribution list on new orders.
+        // Skip non-order events (e.g., subscription/donation) and updates
+        // to existing orders — we only want the first placement to ping.
+        if (/placed|created/i.test(eventType)) {
+          sendOrderEmail(order, pickHeadline(eventType))
+            .then((info) =>
+              console.log(`[webhook] email sent ${info.messageId || ''}`)
+            )
+            .catch((e) =>
+              console.error(`[webhook] email failed: ${e.message}`)
+            );
         }
 
         res.writeHead(200, { 'content-type': 'application/json' });
