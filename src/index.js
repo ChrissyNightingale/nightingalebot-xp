@@ -35,6 +35,7 @@ import * as purge from './commands/purge.js';
 import { startBirthdayWatcher } from './birthdays.js';
 import { startCronLoop } from './cron-loop.js';
 import { startSalesRecap } from './sales-recap.js';
+import { startStatsChannels } from './stats-channels.js';
 import { startMonthlyReport } from './monthly-report.js';
 import { startWebhookServer } from './webhook-server.js';
 
@@ -75,6 +76,7 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildPresences,
   ],
   // Partials so reactions on older messages still fire messageReactionAdd.
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
@@ -111,6 +113,7 @@ client.once('clientReady', async (c) => {
 
   startSalesRecap(c);
   startMonthlyReport(c);
+  startStatsChannels(c);
   startWebhookServer(c);
 });
 
