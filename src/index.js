@@ -104,7 +104,9 @@ client.once('clientReady', async (c) => {
   // Music/video/Twitch/Merch polling + reactive guild checks. Was a GH
   // Actions cron at */30 (cost $0 but 30-min lag). Now in-process every 5
   // min — same cost, 6x tighter detection.
-  const cronIntervalMs = Number(process.env.CRON_INTERVAL_MS) || 5 * 60 * 1000;
+  // 60s tick keeps Twitch go-live latency under 2 min while staying within
+  // every API's rate limits and Fly's free-egress envelope.
+  const cronIntervalMs = Number(process.env.CRON_INTERVAL_MS) || 60_000;
   startCronLoop(cronIntervalMs);
 
   startSalesRecap(c);

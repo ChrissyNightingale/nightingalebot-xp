@@ -1160,11 +1160,11 @@ async function simulateTwitchLive() {
 let tickCounter = 0;
 
 async function backstopRulesReactions(state) {
-  if (tickCounter % 12 !== 0) return;
+  if (tickCounter % 60 !== 0) return;
   await checkRulesReactions(state);
 }
 async function backstopReactionRoles(state) {
-  if (tickCounter % 12 !== 0) return;
+  if (tickCounter % 60 !== 0) return;
   await checkReactionRoles(state);
 }
 
