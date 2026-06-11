@@ -57,12 +57,28 @@ export async function fetchProducts() {
 }
 
 // In dollars (the API returns decimal strings — sum carefully).
+// amounts.total = CASH collected (post store-credit / gift cards).
 function orderTotal(o) {
   return Number(o?.amounts?.total?.value || 0);
 }
 
+// Quantity lives at offers[].variant.quantity in the real payload; fall back
+// to offers[].quantity for older/sparser shapes.
+function offerQty(off) {
+  return Number(off?.variant?.quantity ?? off?.quantity ?? 1);
+}
+
 function orderUnits(o) {
-  return (o?.offers || []).reduce((n, off) => n + (off?.quantity || 1), 0);
+  return (o?.offers || []).reduce((n, off) => n + offerQty(off), 0);
+}
+
+// Gross retail value: sum of unitPrice × qty — what the order was "worth"
+// before store credit / gift cards / discounts.
+function orderGrossRetail(o) {
+  return (o?.offers || []).reduce((s, off) => {
+    const unit = Number(off?.variant?.unitPrice?.value ?? off?.price?.value ?? 0);
+    return s + unit * offerQty(off);
+  }, 0);
 }
 
 function orderItems(o) {
@@ -83,20 +99,21 @@ function inWindow(o, sinceMs, untilMs) {
 export function summarize(orders, sinceMs, untilMs) {
   const win = orders.filter((o) => inWindow(o, sinceMs, untilMs));
   const total = win.reduce((s, o) => s + orderTotal(o), 0);
+  const grossRetail = win.reduce((s, o) => s + orderGrossRetail(o), 0);
   const units = win.reduce((s, o) => s + orderUnits(o), 0);
 
   // Top SKU by units in window.
   const skuUnits = new Map();
   const skuRev = new Map();
   for (const o of win) {
-    const r = orderTotal(o);
     for (const off of o.offers || []) {
       const name = off?.variant?.name || off?.product?.name || 'unknown';
-      const q = off?.quantity || 1;
+      const q = offerQty(off);
       skuUnits.set(name, (skuUnits.get(name) || 0) + q);
-      // Revenue per offer: amount.value if present, else split order total
-      const offerRev = Number(off?.price?.value || 0);
-      skuRev.set(name, (skuRev.get(name) || 0) + offerRev);
+      const unit = Number(
+        off?.variant?.unitPrice?.value ?? off?.price?.value ?? 0
+      );
+      skuRev.set(name, (skuRev.get(name) || 0) + unit * q);
     }
   }
   const topByUnits = [...skuUnits.entries()].sort((a, b) => b[1] - a[1])[0];
@@ -104,7 +121,9 @@ export function summarize(orders, sinceMs, untilMs) {
 
   return {
     orderCount: win.length,
-    revenue: total,
+    revenue: total, // cash collected (post credit/gift cards)
+    grossRetail, // retail value before credits/discounts
+    credits: Math.max(0, grossRetail - total),
     units,
     topByUnits: topByUnits ? { name: topByUnits[0], units: topByUnits[1] } : null,
     topByRev: topByRev ? { name: topByRev[0], revenue: topByRev[1] } : null,

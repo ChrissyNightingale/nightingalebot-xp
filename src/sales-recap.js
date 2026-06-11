@@ -125,10 +125,16 @@ async function postRecap(client) {
       [
         `**Yesterday:** ${yest.orderCount} orders · ${yest.units} units · **${fmtUSD(
           yest.revenue
-        )}**`,
+        )}** cash` +
+          (yest.credits > 0.005
+            ? ` · ${fmtUSD(yest.grossRetail)} gross retail (${fmtUSD(yest.credits)} in credits)`
+            : ''),
         `**Last 7d:** ${prev7.orderCount} orders · ${prev7.units} units · **${fmtUSD(
           prev7.revenue
-        )}**` +
+        )}** cash` +
+          (prev7.credits > 0.005
+            ? ` · ${fmtUSD(prev7.grossRetail)} gross retail (${fmtUSD(prev7.credits)} in credits)`
+            : '') +
           (wowPct === null
             ? ''
             : ` · ${wowPct >= 0 ? '▲' : '▼'} ${Math.abs(wowPct).toFixed(1)}% vs prior 7d`),
