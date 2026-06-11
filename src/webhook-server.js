@@ -109,6 +109,11 @@ export function startWebhookServer(client) {
         // Fourthwall payload shape: { type, data: { ... order ... } } — exact
         // fields vary by event. We tolerate both top-level and nested order.
         const eventType = payload?.type || payload?.event || 'unknown';
+        // Log the raw payload structure so we can map Fourthwall's actual
+        // event shapes (truncated to keep logs sane).
+        console.log(
+          `[webhook] raw ${eventType}: ${JSON.stringify(payload).slice(0, 1500)}`
+        );
         const raw = payload?.data || payload?.order || payload;
         const order = await hydrateOrder(raw, eventType);
         const statusHint =
