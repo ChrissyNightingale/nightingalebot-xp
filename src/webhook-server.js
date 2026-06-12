@@ -53,12 +53,10 @@ function pickHeadline(eventType, statusHint) {
   return `🛒 ${eventType}`;
 }
 
-// On ORDER_UPDATED, Fourthwall sends a sparse payload (id + new status).
-// Re-fetch the full order so the embed has items, total, address, etc.
-// The /open-api/v1.0/order/{uuid} endpoint is the only working single-order
-// lookup — there's no /order/friendly/{friendlyId} on the open API surface.
+// Fallback: fetch the full order by UUID when the webhook payload is sparse
+// or missing friendlyId. /open-api/v1.0/order/{uuid} is the only working
+// single-order lookup on the open API surface.
 async function hydrateOrder(rawOrder, eventType) {
-  if (!/updated/i.test(eventType)) return rawOrder;
   if (!rawOrder?.id) return rawOrder;
   try {
     return await fetchOrderById(rawOrder.id);
@@ -109,13 +107,17 @@ export function startWebhookServer(client) {
         // Fourthwall payload shape: { type, data: { ... order ... } } — exact
         // fields vary by event. We tolerate both top-level and nested order.
         const eventType = payload?.type || payload?.event || 'unknown';
-        // Log the raw payload structure so we can map Fourthwall's actual
-        // event shapes (truncated to keep logs sane).
-        console.log(
-          `[webhook] raw ${eventType}: ${JSON.stringify(payload).slice(0, 1500)}`
-        );
-        const raw = payload?.data || payload?.order || payload;
-        const order = await hydrateOrder(raw, eventType);
+        // Real Fourthwall webhook shape (captured 2026-06-12):
+        //   { id: "weve_...", webhookId, shopId, type, apiVersion,
+        //     createdAt, data: { order: { ...full order... } } }
+        // The full order rides along — no API hydration needed in the
+        // common case. Keep hydrate as a fallback for sparse payloads.
+        const raw =
+          payload?.data?.order || payload?.data || payload?.order || payload;
+        // Use the inline order when it's complete (amounts + friendlyId);
+        // otherwise hydrate by UUID to fill the gaps.
+        const isComplete = (raw?.amounts || raw?.offers) && raw?.friendlyId;
+        const order = isComplete ? raw : await hydrateOrder(raw, eventType);
         const statusHint =
           order?.status ||
           order?.fulfillment?.status ||
