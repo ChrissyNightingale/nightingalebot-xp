@@ -37,6 +37,7 @@ import { startBirthdayWatcher } from './birthdays.js';
 import { startCronLoop } from './cron-loop.js';
 import { startSalesRecap } from './sales-recap.js';
 import { startStatsChannels } from './stats-channels.js';
+import { startApparelDesigner } from './apparel.js';
 import { startMonthlyReport } from './monthly-report.js';
 import { startWebhookServer } from './webhook-server.js';
 
@@ -115,6 +116,7 @@ client.once('clientReady', async (c) => {
   startSalesRecap(c);
   startMonthlyReport(c);
   startStatsChannels(c);
+  startApparelDesigner(c);
   startWebhookServer(c);
 });
 

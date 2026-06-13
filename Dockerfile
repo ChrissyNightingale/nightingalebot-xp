@@ -24,6 +24,7 @@ ENV CRON_STATE_PATH=/data/cron-state.json
 COPY --from=build /app/node_modules ./node_modules
 COPY package*.json ./
 COPY src ./src
+COPY fonts ./fonts
 
 # Seed snapshot of the cron bot's state — used on first boot only, so we
 # don't lose months of de-duplication state from the GH Actions bot.
