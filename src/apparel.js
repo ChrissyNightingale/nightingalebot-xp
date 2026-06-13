@@ -165,7 +165,59 @@ function graphicPhrase(ink, accent) {
   body += `<text x="${cx}" y="${y + 4}" text-anchor="middle" font-family="Oswald" font-size="18" fill="${accent}" letter-spacing="6">CHRISSY NIGHTINGALE</text>`;
   return { name: 'Statement Print', svg: body };
 }
-const GRAPHICS = [graphicStacked, graphicTitle, graphicEmblem, graphicPhrase];
+function graphicLyric(ink, accent) {
+  const cx = 540;
+  const phrase = pick(PHRASES);
+  const lines = twoLines(phrase);
+  let y = lines.length > 1 ? 500 : 560;
+  let body = `<text x="${cx - 158}" y="${y - 50}" text-anchor="middle" font-family="Anton" font-size="120" fill="${accent}" opacity="0.85">&#8220;</text>`;
+  for (const l of lines) {
+    const fs = fitSize(l, 360, 84);
+    body += `<text x="${cx}" y="${y}" text-anchor="middle" font-family="Oswald" font-size="${fs}" font-style="italic" fill="${ink}" font-weight="600">${esc(l)}</text>`;
+    y += fs + 4;
+  }
+  body += `<text x="${cx + 158}" y="${y + 6}" text-anchor="middle" font-family="Anton" font-size="120" fill="${accent}" opacity="0.85">&#8221;</text>`;
+  body += `<text x="${cx}" y="${y + 34}" text-anchor="middle" font-family="Oswald" font-size="18" fill="${accent}" letter-spacing="6">CHRISSY NIGHTINGALE</text>`;
+  return { name: 'Lyric Strip', svg: body };
+}
+function graphicTour(ink, accent) {
+  const cx = 540;
+  // shuffle a few titles as a "tour" / collection list
+  const stops = [...TITLES].sort(() => Math.random() - 0.5).slice(0, 5);
+  let body = `<text x="${cx}" y="450" text-anchor="middle" font-family="Anton" font-size="62" fill="${ink}">NIGHTINGALE</text>`;
+  body += `<rect x="${cx - 170}" y="466" width="340" height="4" fill="${accent}"/>`;
+  body += `<text x="${cx}" y="496" text-anchor="middle" font-family="Oswald" font-size="20" fill="${accent}" letter-spacing="6">THE COLLECTION</text>`;
+  let y = 540;
+  for (const s of stops) {
+    body += `<text x="${cx}" y="${y}" text-anchor="middle" font-family="Oswald" font-size="22" fill="${ink}" letter-spacing="2">${esc(s)}</text>`;
+    y += 30;
+  }
+  return { name: 'Collection Back-Print', svg: body };
+}
+function graphicOutline(ink, accent) {
+  const cx = 540;
+  const title = pick(TITLES);
+  const lines = twoLines(title);
+  let y = lines.length > 1 ? 490 : 550;
+  let body = '';
+  for (const l of lines) {
+    const fs = fitSize(l, 380, 96);
+    body += `<text x="${cx}" y="${y}" text-anchor="middle" font-family="Anton" font-size="${fs}" fill="none" stroke="${ink}" stroke-width="2.5">${esc(l)}</text>`;
+    y += fs + 2;
+  }
+  body += `<circle cx="${cx}" cy="${y + 14}" r="5" fill="${accent}"/>`;
+  body += `<text x="${cx}" y="${y + 44}" text-anchor="middle" font-family="Oswald" font-size="18" fill="${accent}" letter-spacing="5">CHRISSY NIGHTINGALE</text>`;
+  return { name: 'Outline Title', svg: body };
+}
+const GRAPHICS = [
+  graphicStacked,
+  graphicTitle,
+  graphicEmblem,
+  graphicPhrase,
+  graphicLyric,
+  graphicTour,
+  graphicOutline,
+];
 
 // ---- distress overlay (optional) ----
 function distress(ink) {
