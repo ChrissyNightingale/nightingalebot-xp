@@ -235,57 +235,38 @@ function distress(ink) {
   return `<g style="mix-blend-mode:overlay">${s}</g>`;
 }
 
-// ---- compose one design ----
+// ---- compose one design (graphic artwork only — no garment) ----
+const SIZE = 1080; // square design tile
+
 export function buildDesign() {
   const cw = pick(COLORWAYS);
-  const garment = pick(GARMENTS);
   const inks = cw.dark ? INK_DARK : INK_LIGHT;
   const ink = inks[0];
   const accent = pick(inks.slice(1).concat(['#ff1a66']));
   const g = pick(GRAPHICS)(ink, accent);
   const useDistress = Math.random() < 0.55;
 
-  // garment-specific overlays
-  let overlays = '';
-  if (garment === 'Hoodie') {
-    overlays += `<path d="${HOOD}" fill="${cw.shade}"/>`;
-    overlays += `<rect x="430" y="780" width="220" height="150" rx="14" fill="${cw.shade}"/>`;
-    overlays += `<line x1="500" y1="320" x2="500" y2="470" stroke="${cw.shade}" stroke-width="7" stroke-linecap="round"/><line x1="580" y1="320" x2="580" y2="470" stroke="${cw.shade}" stroke-width="7" stroke-linecap="round"/>`;
-    overlays += `<circle cx="500" cy="474" r="6" fill="${cw.shade}"/><circle cx="580" cy="474" r="6" fill="${cw.shade}"/>`;
-  } else if (garment === 'Crewneck') {
-    overlays += `<path d="M398 250 C474 296 606 296 682 250" fill="none" stroke="${cw.shade}" stroke-width="14" stroke-linecap="round"/>`;
-    overlays += `<rect x="330" y="975" width="420" height="14" fill="${cw.shade}"/>`;
-  }
+  // The graphic templates are authored around cx=540, cy~560 — already
+  // centered for a 1080 square. Nudge up slightly so the watermark has room.
+  const wmFill = cw.dark ? '#ffffff' : '#000000';
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">
     <defs>
-      <radialGradient id="bg" cx="50%" cy="38%" r="75%">
-        <stop offset="0%" stop-color="#15151c"/><stop offset="100%" stop-color="#08080d"/>
+      <radialGradient id="bg" cx="50%" cy="42%" r="78%">
+        <stop offset="0%" stop-color="${cw.fill}"/><stop offset="100%" stop-color="${cw.shade}"/>
       </radialGradient>
-      <linearGradient id="fold" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#ffffff" stop-opacity="0.10"/><stop offset="55%" stop-color="#ffffff" stop-opacity="0"/><stop offset="100%" stop-color="#000000" stop-opacity="0.18"/>
-      </linearGradient>
     </defs>
-    <rect width="${W}" height="${H}" fill="url(#bg)"/>
-    <!-- header -->
-    <text x="${W / 2}" y="120" text-anchor="middle" font-family="Anton" font-size="46" fill="#ff1a66" letter-spacing="6">DAILY DESIGN DROP</text>
-    <text x="${W / 2}" y="156" text-anchor="middle" font-family="Oswald" font-size="20" fill="#8a8f9c" letter-spacing="4">CHRISSY NIGHTINGALE · THE NIGHTINGALE WORKS</text>
-    <!-- garment -->
-    <path d="${BODY}" fill="${cw.fill}"/>
-    ${overlays}
-    <path d="${BODY}" fill="url(#fold)"/>
-    <path d="${BODY}" fill="none" stroke="#000000" stroke-opacity="0.25" stroke-width="2"/>
-    <!-- chest print -->
-    ${g.svg}
-    ${useDistress ? distress(ink) : ''}
-    <!-- footer chip -->
-    <rect x="${W / 2 - 250}" y="1110" width="500" height="56" rx="28" fill="#14141c" stroke="#2a2a3a"/>
-    <text x="${W / 2}" y="1147" text-anchor="middle" font-family="Oswald" font-size="22" fill="#cdd6e4">${esc(cw.name)} ${esc(garment)} · ${esc(g.name)}</text>
+    <rect width="${SIZE}" height="${SIZE}" fill="url(#bg)"/>
+    <g transform="translate(0,-14)">
+      ${g.svg}
+      ${useDistress ? distress(ink) : ''}
+    </g>
+    <text x="${SIZE / 2}" y="${SIZE - 34}" text-anchor="middle" font-family="Oswald" font-size="16" fill="${wmFill}" fill-opacity="0.45" letter-spacing="4">CHRISSYNIGHTINGALE.COM</text>
   </svg>`;
 
   return {
     svg,
-    meta: { colorway: cw.name, garment, design: g.name, distress: useDistress },
+    meta: { colorway: cw.name, design: g.name, distress: useDistress },
   };
 }
 
@@ -311,7 +292,7 @@ export async function postApparelNow(client) {
   const { svg, meta } = buildDesign();
   const png = renderPng(svg);
   const file = new AttachmentBuilder(Buffer.from(png), {
-    name: `nightingale-${meta.garment.toLowerCase()}-${Date.now()}.png`,
+    name: `nightingale-design-${Date.now()}.png`,
   });
   const ch = await client.channels.fetch(channelId).catch(() => null);
   if (!ch) {
@@ -319,11 +300,11 @@ export async function postApparelNow(client) {
     return false;
   }
   await ch.send({
-    content: `🧵 **Daily design drop** — *${meta.design}* on a **${meta.colorway} ${meta.garment}**`,
+    content: `🎨 **New design** — *${meta.design}* · ${meta.colorway}`,
     files: [file],
     allowedMentions: { parse: [] },
   });
-  console.log(`[apparel] posted ${meta.colorway} ${meta.garment} / ${meta.design}`);
+  console.log(`[apparel] posted ${meta.colorway} / ${meta.design}`);
   return true;
 }
 
