@@ -14,6 +14,6 @@
     "@resvg/resvg-js": "^2.6.2",
     "better-sqlite3": "^11.7.0",
     "discord.js": "^14.16.3",
-    "nodemailer": "^6.9.16"
+    "nodemailer": "^8.0.11"
   }
 }
