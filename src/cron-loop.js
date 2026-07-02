@@ -26,6 +26,7 @@ const cfg = {
   musicChannelId: '1476199961543708774',
   twitchChannelId: '1476199961543708774',
   merchChannelId: '1511951314895241356',
+  clipsChannelId: '1514373880960127147',
   welcomeChannelId: '1476195654761189489',
   reactionRolesChannelId: '1476730021837144124',
   generalChannelId: '1475433666682290240',
@@ -97,6 +98,7 @@ const DEFAULT_STATE = {
   youtube: { channelId: null, lastVideoIds: [] },
   spotify: { lastAlbumIds: [] },
   twitch: { isLive: false, lastStreamId: null },
+  clips: { broadcasterId: null, lastClipIds: [] },
   merch: { lastProductSlugs: [] },
   verified: { knownMemberIds: [] },
   joins: { knownMemberIds: [] },
@@ -128,6 +130,8 @@ async function loadState() {
     s.youtube ??= { channelId: null, lastVideoIds: [] };
     s.spotify ??= { lastAlbumIds: [] };
     s.twitch ??= { isLive: false, lastStreamId: null };
+    s.clips ??= { broadcasterId: null, lastClipIds: [] };
+    s.clips.lastClipIds ??= [];
     s.merch ??= { lastProductSlugs: [] };
     s.verified ??= { knownMemberIds: [] };
     s.joins ??= { knownMemberIds: [] };
@@ -466,6 +470,66 @@ async function checkTwitch(state) {
     state.twitch.isLive = false;
     console.log('[twitch] stream ended');
   }
+}
+
+// Clip harvester: every ~10 min, pull clips created in the last 24h and post
+// any we haven't seen to #clips. First run seeds silently so we don't flood
+// the channel with day-old clips.
+async function checkClips(state) {
+  if (tickCounter % 10 !== 0) return;
+  const { token, clientId } = await twitchToken();
+  const headers = { Authorization: `Bearer ${token}`, 'Client-Id': clientId };
+
+  // Resolve + cache the broadcaster id once.
+  if (!state.clips.broadcasterId) {
+    const res = await fetch(
+      `https://api.twitch.tv/helix/users?login=${cfg.twitchLogin}`,
+      { headers }
+    );
+    if (!res.ok) throw new Error(`Twitch users ${res.status}: ${await res.text()}`);
+    const user = ((await res.json()).data || [])[0];
+    if (!user) throw new Error(`Twitch user not found: ${cfg.twitchLogin}`);
+    state.clips.broadcasterId = user.id;
+    console.log(`[clips] broadcaster_id ${user.id}`);
+  }
+
+  const startedAt = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const res = await fetch(
+    `https://api.twitch.tv/helix/clips?broadcaster_id=${state.clips.broadcasterId}` +
+      `&started_at=${encodeURIComponent(startedAt)}&first=20`,
+    { headers }
+  );
+  if (!res.ok) throw new Error(`Twitch clips ${res.status}: ${await res.text()}`);
+  const clips = (await res.json()).data || [];
+
+  const seen = new Set(state.clips.lastClipIds);
+  const isSeed = state.clips.lastClipIds.length === 0;
+  const fresh = clips.filter((c) => !seen.has(c.id));
+  if (isSeed) {
+    for (const c of fresh) state.clips.lastClipIds.push(c.id);
+    state.clips.lastClipIds = state.clips.lastClipIds.slice(-200);
+    if (fresh.length) console.log(`[clips] seeded ${fresh.length} clips`);
+    return;
+  }
+
+  // Oldest first so the channel reads chronologically.
+  fresh.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  for (const c of fresh) {
+    await discordPost(cfg.clipsChannelId, {
+      content: `🎬 New clip, clipped by **${c.creator_name || 'someone'}**!`,
+      embed: {
+        title: c.title || 'Untitled clip',
+        url: c.url,
+        description: c.game_name ? `Playing **${c.game_name}**` : undefined,
+        color: cfg.colors.twitch,
+        image: c.thumbnail_url ? { url: c.thumbnail_url } : undefined,
+        footer: { text: `Twitch clip · ${Math.round(c.duration || 0)}s` },
+      },
+    });
+    state.clips.lastClipIds.push(c.id);
+    console.log(`[clips] posted ${c.id}`);
+  }
+  state.clips.lastClipIds = state.clips.lastClipIds.slice(-200);
 }
 
 // ---------------------------------------------------------- Members API ---
@@ -1179,6 +1243,7 @@ export async function runCronTick() {
     ['youtube', checkYouTube],
     ['spotify', checkSpotify],
     ['twitch', checkTwitch],
+    ['clips', checkClips],
     ['merch', checkMerch],
     ['joins', checkJoinWelcome],
     ['verified', checkVerifiedWelcome],
